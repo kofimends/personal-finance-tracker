@@ -1,0 +1,188 @@
+<?php
+// budgets.php - Manage Monthly Budgets
+require_once 'config.php';
+
+// Simple authentication check
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$message = '';
+
+// Handle form submission to add a new budget
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_budget'])) {
+    $category_id = $_POST['category_id'];
+    $month_year = $_POST['month_year'];
+    $monthly_amount = $_POST['monthly_amount'];
+
+    if (!empty($category_id) && !empty($monthly_amount)) {
+        try {
+            $sql = "INSERT INTO budgets (user_id, category_id, monthly_amount, month_year)
+                    VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$user_id, $category_id, $monthly_amount, $month_year]);
+            $message = "Budget added successfully!";
+        } catch (PDOException $e) {
+            $message = "Error: Could not add budget.";
+        }
+    }
+}
+
+// Fetch user's categories for dropdown
+$categories = $conn->prepare("SELECT category_id, category_name FROM categories WHERE user_id = ? ORDER BY category_name");
+$categories->execute([$user_id]);
+$category_list = $categories->fetchAll();
+
+// Fetch user's current budgets with spending data (using a JOIN)
+$budget_query = "
+    SELECT
+        b.budget_id,
+        c.category_name,
+        b.monthly_amount,
+        b.month_year,
+        COALESCE(SUM(t.amount), 0) as spent
+    FROM budgets b
+    JOIN categories c ON b.category_id = c.category_id
+    LEFT JOIN transactions t ON b.category_id = t.category_id
+        AND t.user_id = b.user_id
+        AND t.transaction_type = 'expense'
+        AND DATE_FORMAT(t.transaction_date, '%Y-%m') = DATE_FORMAT(b.month_year, '%Y-%m')
+    WHERE b.user_id = ?
+    GROUP BY b.budget_id, c.category_name, b.monthly_amount, b.month_year
+    ORDER BY b.month_year DESC
+";
+$budgets = $conn->prepare($budget_query);
+$budgets->execute([$user_id]);
+$budget_list = $budgets->fetchAll();
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Budgets - Personal Finance Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background-color: #f4f7f6; color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h1, h2 { color: #2c3e50; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; }
+        .btn { display: inline-block; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background-color 0.3s; border: none; cursor: pointer; }
+        .btn:hover { background-color: #2980b9; }
+        .btn-primary { background-color: #2ecc71; }
+        .btn-primary:hover { background-color: #27ae60; }
+        .message { padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .form-section, .list-section { margin-bottom: 40px; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+        .progress-bar { width: 100%; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; height: 20px; margin-top: 5px; }
+        .progress { height: 100%; background-color: #3498db; border-radius: 10px; text-align: center; color: white; font-size: 12px; line-height: 20px; }
+        .progress.over { background-color: #e74c3c; }
+        .nav-links { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        .nav-links a { color: #3498db; text-decoration: none; margin: 0 10px; }
+        .nav-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Manage Your Budgets</h1>
+            <a href="dashboard.php" class="btn">Back to Dashboard</a>
+        </div>
+
+        <?php if ($message): ?>
+            <div class="message success"><?php echo htmlspecialchars($message); ?></div>
+        <?php endif; ?>
+
+        <!-- Form to Add a New Budget -->
+        <div class="form-section">
+            <h2>Set a New Monthly Budget</h2>
+            <form method="POST" action="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="category_id">Category</label>
+                        <select id="category_id" name="category_id" required>
+                            <option value="">Select a Category</option>
+                            <?php foreach ($category_list as $cat): ?>
+                                <option value="<?php echo $cat['category_id']; ?>">
+                                    <?php echo htmlspecialchars($cat['category_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="month_year">For Month</label>
+                        <input type="month" id="month_year" name="month_year" value="<?php echo date('Y-m'); ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="monthly_amount">Budget Amount ($)</label>
+                        <input type="number" id="monthly_amount" name="monthly_amount" step="0.01" min="0.01" placeholder="0.00" required>
+                    </div>
+                </div>
+                <button type="submit" name="add_budget" class="btn btn-primary">Add Budget</button>
+            </form>
+        </div>
+
+        <!-- List of Existing Budgets -->
+        <div class="list-section">
+            <h2>Your Current Budgets</h2>
+            <?php if (count($budget_list) > 0): ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Month</th>
+                            <th>Budget</th>
+                            <th>Spent</th>
+                            <th>Remaining</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($budget_list as $budget):
+                            $spent = $budget['spent'];
+                            $budget_amount = $budget['monthly_amount'];
+                            $remaining = $budget_amount - $spent;
+                            $percentage = $budget_amount > 0 ? ($spent / $budget_amount) * 100 : 0;
+                        ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($budget['category_name']); ?></td>
+                            <td><?php echo date('F Y', strtotime($budget['month_year'])); ?></td>
+                            <td>$<?php echo number_format($budget_amount, 2); ?></td>
+                            <td>$<?php echo number_format($spent, 2); ?></td>
+                            <td style="color: <?php echo $remaining >= 0 ? '#27ae60' : '#e74c3c'; ?>; font-weight: bold;">
+                                $<?php echo number_format($remaining, 2); ?>
+                            </td>
+                            <td>
+                                <div class="progress-bar">
+                                    <div class="progress <?php echo $percentage > 100 ? 'over' : ''; ?>" style="width: <?php echo min($percentage, 100); ?>%;">
+                                        <?php echo number_format($percentage, 0); ?>%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>You haven't set any budgets yet. Use the form above to create your first one.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="nav-links">
+            <a href="accounts.php">Manage Accounts</a> |
+            <a href="reports.php">View Reports</a> |
+            <a href="dashboard.php">Dashboard</a> |
+            <a href="logout.php">Logout</a>
+        </div>
+    </div>
+</body>
+</html>
