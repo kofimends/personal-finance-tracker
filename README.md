@@ -1,11 +1,10 @@
-# Personal Finance Tracker
+ Personal Finance Tracker
 
-## CIS 344 Database Project - Fall 2025
-### Lehman College, City University of New York
+CIS 344 Database Project - Fall 2025
 
 A complete personal finance management web application built with PHP and MySQL.
 
-## Features
+Features
 - User authentication (login/register)
 - Income and expense tracking
 - Budget management with visual progress bars
