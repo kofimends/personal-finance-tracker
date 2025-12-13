@@ -1,8 +1,8 @@
 <?php
-// reports.php - Financial Reports and Analytics
+
 require_once 'config.php';
 
-// Simple authentication check
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
@@ -10,11 +10,11 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Get date range from URL or use current month
+
 $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
 $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
 
-// Fetch income vs expenses report (using JOIN)
+
 $income_expense_sql = "
     SELECT 
         DATE_FORMAT(transaction_date, '%Y-%m') as month,
@@ -31,7 +31,7 @@ $income_expense_stmt = $conn->prepare($income_expense_sql);
 $income_expense_stmt->execute([$user_id, $start_date, $end_date]);
 $monthly_report = $income_expense_stmt->fetchAll();
 
-// Fetch spending by category (using JOIN)
+
 $category_spending_sql = "
     SELECT 
         c.category_name,
@@ -50,7 +50,7 @@ $category_spending_stmt = $conn->prepare($category_spending_sql);
 $category_spending_stmt->execute([$user_id, $start_date, $end_date]);
 $category_spending = $category_spending_stmt->fetchAll();
 
-// Fetch account summary (using JOIN)
+
 $account_summary_sql = "
     SELECT 
         a.account_name,
@@ -125,7 +125,7 @@ $net_balance = $total_income - $total_expenses;
             <a href="dashboard.php" class="btn">Back to Dashboard</a>
         </div>
 
-        <!-- Date Filter -->
+      
         <div class="date-filter">
             <h3>Filter by Date Range</h3>
             <form method="GET" action="reports.php" class="date-form">
@@ -143,7 +143,7 @@ $net_balance = $total_income - $total_expenses;
             </form>
         </div>
 
-        <!-- Summary Cards -->
+
         <div class="summary-cards">
             <div class="card">
                 <h3>Total Income</h3>
@@ -162,9 +162,9 @@ $net_balance = $total_income - $total_expenses;
             </div>
         </div>
 
-        <!-- Reports Grid -->
+      
         <div class="reports-grid">
-            <!-- Monthly Income vs Expenses -->
+          
             <div class="report-section">
                 <h2>Monthly Summary</h2>
                 <?php if (count($monthly_report) > 0): ?>
@@ -197,7 +197,7 @@ $net_balance = $total_income - $total_expenses;
                 <?php endif; ?>
             </div>
 
-            <!-- Spending by Category -->
+        
             <div class="report-section">
                 <h2>Spending by Category</h2>
                 <?php if (count($category_spending) > 0): ?>
@@ -228,7 +228,7 @@ $net_balance = $total_income - $total_expenses;
                 <?php endif; ?>
             </div>
 
-            <!-- Account Summary -->
+       
             <div class="report-section">
                 <h2>Account Summary</h2>
                 <?php if (count($account_summary) > 0): ?>
