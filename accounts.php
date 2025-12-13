@@ -1,8 +1,8 @@
 <?php
-// accounts.php - Manage Financial Accounts
+// Manage Financial Accounts
 require_once 'config.php';
 
-// Simple authentication check
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $message = '';
 
-// Handle form submission to add a new account
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_account'])) {
         $account_name = trim($_POST['account_name']);
@@ -31,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
     
-    // Handle delete account
+
     if (isset($_POST['delete_account'])) {
         $account_id = $_POST['account_id'];
         
         try {
-            // Check if account has transactions
+       
             $check_sql = "SELECT COUNT(*) as count FROM transactions WHERE account_id = ?";
             $check_stmt = $conn->prepare($check_sql);
             $check_stmt->execute([$account_id]);
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Fetch user's accounts with balance information
+
 $accounts_sql = "
     SELECT 
         a.account_id,
@@ -75,7 +75,7 @@ $accounts = $conn->prepare($accounts_sql);
 $accounts->execute([$user_id]);
 $account_list = $accounts->fetchAll();
 
-// Calculate total balance
+
 $total_balance = 0;
 foreach ($account_list as $account) {
     $total_balance += $account['balance'];
@@ -131,7 +131,7 @@ foreach ($account_list as $account) {
             </div>
         <?php endif; ?>
 
-        <!-- Total Balance Summary -->
+       
         <div class="total-balance">
             <h3>Total Balance Across All Accounts</h3>
             <p style="font-size: 2rem; color: <?php echo $total_balance >= 0 ? '#27ae60' : '#e74c3c'; ?>">
@@ -139,7 +139,7 @@ foreach ($account_list as $account) {
             </p>
         </div>
 
-        <!-- Form to Add a New Account -->
+        
         <div class="form-section">
             <h2>Add New Account</h2>
             <form method="POST" action="">
