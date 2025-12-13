@@ -1,5 +1,5 @@
 <?php
-// budgets.php - Manage Monthly Budgets
+//  Manage Monthly Budgets
 require_once 'config.php';
 
 // Simple authentication check
@@ -11,7 +11,6 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 $message = '';
 
-// Handle form submission to add a new budget
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_budget'])) {
     $category_id = $_POST['category_id'];
     $month_year = $_POST['month_year'];
@@ -30,12 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_budget'])) {
     }
 }
 
-// Fetch user's categories for dropdown
+
 $categories = $conn->prepare("SELECT category_id, category_name FROM categories WHERE user_id = ? ORDER BY category_name");
 $categories->execute([$user_id]);
 $category_list = $categories->fetchAll();
 
-// Fetch user's current budgets with spending data (using a JOIN)
+
 $budget_query = "
     SELECT
         b.budget_id,
@@ -131,7 +130,7 @@ $budget_list = $budgets->fetchAll();
             </form>
         </div>
 
-        <!-- List of Existing Budgets -->
+     
         <div class="list-section">
             <h2>Your Current Budgets</h2>
             <?php if (count($budget_list) > 0): ?>
